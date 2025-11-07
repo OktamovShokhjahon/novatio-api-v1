@@ -420,7 +420,7 @@ async function messagesWrittenToAgent(req, res) {
     }
 
     // Get paginated messages
-    const messages = await UserMessageModel.find({ toAgent: agentId })
+    const messages = await Message.find({ agentId })
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limitNumber);
