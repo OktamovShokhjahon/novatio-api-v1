@@ -438,7 +438,7 @@ async function messagesWrittenToAgent(req, res) {
       {
         $project: {
           _id: 0,
-          userId: "$_id",
+          fromId: "$_id",
           firstName: 1,
           lastName: 1,
         },
