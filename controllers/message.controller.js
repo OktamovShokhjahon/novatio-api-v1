@@ -453,7 +453,7 @@ async function messagesWrittenToAgent(req, res) {
     return res.status(200).json({
       ok: true,
       messages,
-      users,
+      userIds: users,
       pagination: {
         currentPage: pageNumber,
         totalPages,
