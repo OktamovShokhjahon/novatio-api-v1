@@ -6,7 +6,9 @@ const MessageSchema = new Schema(
     userId: String,
     message: String,
     sentBy: String,
-    imageUrl: { type: String, default: null }, // New field
+    imageUrl: { type: String, default: null },
+    firstname: String,
+    lastname: String,
   },
   {
     timestamps: true,
