@@ -46,8 +46,8 @@ async function sendMessageUser(req, res) {
       message: message || "",
       sentBy: "user",
       imageUrl,
-      firstname: firstName,
-      lastname: lastName,
+      firstName: firstName,
+      lastName: lastName,
     });
 
     const newMessage = await newMessageUser.save();
@@ -107,8 +107,8 @@ async function sendMessageAgent(req, res) {
       message: message || "",
       sentBy: "agent",
       imageUrl,
-      firstname: firstName,
-      lastname: lastName,
+      firstName: firstName,
+      lastName: lastName,
     });
 
     const savedMessage = await newMainMessage.save();
@@ -351,39 +351,124 @@ async function getMessages(req, res) {
 //   }
 // }
 
+// async function messagesWrittenToAgent(req, res) {
+//   try {
+//     const { agentId } = req.query;
+//     if (!agentId) {
+//       return res
+//         .status(400)
+//         .json({ ok: false, message: "agentId is required" });
+//     }
+
+//     const users = await Message.aggregate([
+//       { $match: { agentId } },
+//       {
+//         $group: {
+//           _id: "$userId",
+//           firstName: { $first: "$firstName" },
+//           lastName: { $first: "$lastName" },
+//         },
+//       },
+//       {
+//         $project: {
+//           _id: 0,
+//           userId: "$_id",
+//           firstName: 1,
+//           lastName: 1,
+//         },
+//       },
+//     ]);
+
+//     return res.status(200).json({ ok: true, users });
+//   } catch (err) {
+//     console.error(err);
+//     res.status(500).json({ ok: false, message: "Internal server error" });
+//   }
+// }
+
 async function messagesWrittenToAgent(req, res) {
   try {
-    const { agentId } = req.query;
+    const { agentId, page = 1, limit = 10 } = req.query;
+
     if (!agentId) {
-      return res
-        .status(400)
-        .json({ ok: false, message: "agentId is required" });
+      return res.status(400).json({
+        ok: false,
+        message: "agentId is required",
+      });
     }
 
-    // Get all unique users who wrote to the agent
+    const pageNumber = parseInt(page);
+    const limitNumber = parseInt(limit);
+
+    if (pageNumber < 1 || limitNumber < 1) {
+      return res.status(400).json({
+        ok: false,
+        message: "Sahifa va limit musbat son bo'lishi kerak",
+      });
+    }
+
+    const skip = (pageNumber - 1) * limitNumber;
+
+    // Get total messages count
+    const totalMessages = await Message.countDocuments({ agentId });
+
+    if (totalMessages === 0) {
+      return res.status(404).json({
+        ok: false,
+        message: "Bu agentga xali xabarlar yo'q",
+      });
+    }
+
+    // Get paginated messages
+    const messages = await UserMessageModel.find({ toAgent: agentId })
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limitNumber);
+
+    // Get unique users who sent messages to this agent
     const users = await Message.aggregate([
       { $match: { agentId } },
       {
         $group: {
           _id: "$userId",
-          firstname: { $first: "$firstname" },
-          lastname: { $first: "$lastname" },
+          firstName: { $first: "$firstName" },
+          lastName: { $first: "$lastName" },
         },
       },
       {
         $project: {
           _id: 0,
           userId: "$_id",
-          firstname: 1,
-          lastname: 1,
+          firstName: 1,
+          lastName: 1,
         },
       },
     ]);
 
-    return res.status(200).json({ ok: true, users });
+    // Calculate pagination info
+    const totalPages = Math.ceil(totalMessages / limitNumber);
+    const hasNextPage = pageNumber < totalPages;
+    const hasPrevPage = pageNumber > 1;
+
+    return res.status(200).json({
+      ok: true,
+      messages,
+      users,
+      pagination: {
+        currentPage: pageNumber,
+        totalPages,
+        totalMessages,
+        limit: limitNumber,
+        hasNextPage,
+        hasPrevPage,
+      },
+    });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ ok: false, message: "Internal server error" });
+    res.status(500).json({
+      ok: false,
+      message: "Server xatosi",
+    });
   }
 }
 

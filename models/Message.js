@@ -7,8 +7,8 @@ const MessageSchema = new Schema(
     message: String,
     sentBy: String,
     imageUrl: { type: String, default: null },
-    firstname: String,
-    lastname: String,
+    firstName: String,
+    lastName: String,
   },
   {
     timestamps: true,
