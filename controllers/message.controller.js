@@ -420,10 +420,24 @@ async function messagesWrittenToAgent(req, res) {
     }
 
     // Get paginated messages
-    const messages = await Message.find({ agentId })
+    // const messages = await Message.find({ agentId })
+    //   .sort({ createdAt: -1 })
+    //   .skip(skip)
+    //   .limit(limitNumber);
+
+    const messagesRaw = await Message.find({ agentId })
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limitNumber);
+
+    // Transform messages to rename fields
+    const messages = messagesRaw.map((msg) => ({
+      ...msg.toObject(),
+      toAgent: msg.agentId,
+      fromId: msg.userId,
+      agentId: undefined,
+      userId: undefined,
+    }));
 
     // Get unique users who sent messages to this agent
     const users = await Message.aggregate([
