@@ -386,6 +386,106 @@ async function getMessages(req, res) {
 //   }
 // }
 
+// async function messagesWrittenToAgent(req, res) {
+//   try {
+//     const { agentId, page = 1, limit = 10 } = req.query;
+
+//     if (!agentId) {
+//       return res.status(400).json({
+//         ok: false,
+//         message: "agentId is required",
+//       });
+//     }
+
+//     const pageNumber = parseInt(page);
+//     const limitNumber = parseInt(limit);
+
+//     if (pageNumber < 1 || limitNumber < 1) {
+//       return res.status(400).json({
+//         ok: false,
+//         message: "Sahifa va limit musbat son bo'lishi kerak",
+//       });
+//     }
+
+//     const skip = (pageNumber - 1) * limitNumber;
+
+//     // Get total messages count
+//     const totalMessages = await Message.countDocuments({ agentId });
+
+//     if (totalMessages === 0) {
+//       return res.status(404).json({
+//         ok: false,
+//         message: "Bu agentga xali xabarlar yo'q",
+//       });
+//     }
+
+//     // Get paginated messages
+//     // const messages = await Message.find({ agentId })
+//     //   .sort({ createdAt: -1 })
+//     //   .skip(skip)
+//     //   .limit(limitNumber);
+
+//     const messagesRaw = await Message.find({ agentId })
+//       .sort({ createdAt: -1 })
+//       .skip(skip)
+//       .limit(limitNumber);
+
+//     // Transform messages to rename fields
+//     const messages = messagesRaw.map((msg) => ({
+//       ...msg.toObject(),
+//       toAgent: msg.agentId,
+//       fromId: msg.userId,
+//       agentId: undefined,
+//       userId: undefined,
+//     }));
+
+//     // Get unique users who sent messages to this agent
+//     const users = await Message.aggregate([
+//       { $match: { agentId } },
+//       {
+//         $group: {
+//           _id: "$userId",
+//           firstName: { $first: "$firstName" },
+//           lastName: { $first: "$lastName" },
+//         },
+//       },
+//       {
+//         $project: {
+//           _id: 0,
+//           userId: "$_id",
+//           firstName: 1,
+//           lastName: 1,
+//         },
+//       },
+//     ]);
+
+//     // Calculate pagination info
+//     const totalPages = Math.ceil(totalMessages / limitNumber);
+//     const hasNextPage = pageNumber < totalPages;
+//     const hasPrevPage = pageNumber > 1;
+
+//     return res.status(200).json({
+//       ok: true,
+//       messages,
+//       userIds: users,
+//       pagination: {
+//         currentPage: pageNumber,
+//         totalPages,
+//         totalMessages,
+//         limit: limitNumber,
+//         hasNextPage,
+//         hasPrevPage,
+//       },
+//     });
+//   } catch (err) {
+//     console.error(err);
+//     res.status(500).json({
+//       ok: false,
+//       message: "Server xatosi",
+//     });
+//   }
+// }
+
 async function messagesWrittenToAgent(req, res) {
   try {
     const { agentId, page = 1, limit = 10 } = req.query;
@@ -409,38 +509,8 @@ async function messagesWrittenToAgent(req, res) {
 
     const skip = (pageNumber - 1) * limitNumber;
 
-    // Get total messages count
-    const totalMessages = await Message.countDocuments({ agentId });
-
-    if (totalMessages === 0) {
-      return res.status(404).json({
-        ok: false,
-        message: "Bu agentga xali xabarlar yo'q",
-      });
-    }
-
-    // Get paginated messages
-    // const messages = await Message.find({ agentId })
-    //   .sort({ createdAt: -1 })
-    //   .skip(skip)
-    //   .limit(limitNumber);
-
-    const messagesRaw = await Message.find({ agentId })
-      .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(limitNumber);
-
-    // Transform messages to rename fields
-    const messages = messagesRaw.map((msg) => ({
-      ...msg.toObject(),
-      toAgent: msg.agentId,
-      fromId: msg.userId,
-      agentId: undefined,
-      userId: undefined,
-    }));
-
-    // Get unique users who sent messages to this agent
-    const users = await Message.aggregate([
+    // Get unique users with pagination
+    const allUsers = await Message.aggregate([
       { $match: { agentId } },
       {
         $group: {
@@ -459,19 +529,46 @@ async function messagesWrittenToAgent(req, res) {
       },
     ]);
 
-    // Calculate pagination info
-    const totalPages = Math.ceil(totalMessages / limitNumber);
+    if (allUsers.length === 0) {
+      return res.status(404).json({
+        ok: false,
+        message: "Bu agentga xali xabarlar yo'q",
+      });
+    }
+
+    const totalUsers = allUsers.length;
+    const totalPages = Math.ceil(totalUsers / limitNumber);
+
+    // Paginate users
+    const paginatedUsers = allUsers.slice(skip, skip + limitNumber);
+    const userIdsOnPage = paginatedUsers.map((u) => u.userId);
+
+    // Get all messages from users on current page
+    const messagesRaw = await Message.find({
+      agentId,
+      userId: { $in: userIdsOnPage },
+    }).sort({ createdAt: -1 });
+
+    // Transform messages to rename fields
+    const messages = messagesRaw.map((msg) => ({
+      ...msg.toObject(),
+      toAgent: msg.agentId,
+      fromId: msg.userId,
+      agentId: undefined,
+      userId: undefined,
+    }));
+
     const hasNextPage = pageNumber < totalPages;
     const hasPrevPage = pageNumber > 1;
 
     return res.status(200).json({
       ok: true,
       messages,
-      userIds: users,
+      userIds: paginatedUsers,
       pagination: {
         currentPage: pageNumber,
         totalPages,
-        totalMessages,
+        totalUsers,
         limit: limitNumber,
         hasNextPage,
         hasPrevPage,
