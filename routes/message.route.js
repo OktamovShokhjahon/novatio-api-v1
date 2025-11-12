@@ -6,6 +6,7 @@ const {
   sendMessageAgent,
   getMessages,
   messagesWrittenToAgent,
+  deleteChat,
 } = require("../controllers/message.controller");
 const upload = require("../config/multer.config");
 
@@ -17,5 +18,6 @@ router.post("/send-message-user", upload.single("image"), sendMessageUser);
 router.post("/send-message-agent", upload.single("image"), sendMessageAgent);
 router.get("/get-messages", getMessages);
 router.get("/messages-written-to-agent", messagesWrittenToAgent);
+router.delete("/delete-chat", deleteChat);
 
 module.exports = router;

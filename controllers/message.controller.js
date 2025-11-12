@@ -429,6 +429,42 @@ async function messagesWrittenToAgent(req, res) {
   }
 }
 
+async function deleteChat(req, res) {
+  try {
+    const { userId, agentId } = req.query;
+
+    const messages = await Message.find({
+      userId,
+      agentId,
+    });
+
+    if (messages.length === 0) {
+      return res.status(404).send({
+        ok: false,
+        message: "Bu agent va foydalanuvchi xali yozishmalar uyushtirishmagan",
+      });
+    }
+
+    messages.map(async (message) => {
+      await Message.findByIdAndDelete(message._id);
+      await AgentMessage.deleteOne({ toUser: message.userId });
+      await UserMessageModel.deleteOne({ toAgent: message.agentId });
+    });
+
+    res.status(200).send({
+      ok: false,
+      message: "Barchasi o'chirildi",
+      deletedMessages: messages.length,
+    });
+  } catch (err) {
+    res.status(500).send({
+      ok: false,
+      message: "Qandaydir ichki xatolik yuz berdi",
+      error: err,
+    });
+  }
+}
+
 module.exports = {
   sendMessageUser,
   sendMessageAgent,
@@ -436,4 +472,5 @@ module.exports = {
   getMessagesAgentById,
   getMessages,
   messagesWrittenToAgent,
+  deleteChat,
 };
