@@ -9,6 +9,7 @@ const MessageSchema = new Schema(
     imageUrl: { type: String, default: null },
     firstName: String,
     lastName: String,
+    isRead: { type: Boolean, default: false }, // New field
   },
   {
     timestamps: true,

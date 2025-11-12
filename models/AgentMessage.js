@@ -7,7 +7,8 @@ const AgentMessageSchema = new Schema(
     lastName: String,
     message: String,
     toUser: String,
-    imageUrl: { type: String, default: null }, // New field
+    imageUrl: { type: String, default: null },
+    isRead: { type: Boolean, default: false }, // New field
   },
   {
     timestamps: true,
