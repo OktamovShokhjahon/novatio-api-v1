@@ -370,6 +370,7 @@ async function messagesWrittenToAgent(req, res) {
           _id: "$userId",
           firstName: { $first: "$firstName" },
           lastName: { $first: "$lastName" },
+          isRead: { $first: "$isRead" },
         },
       },
       {
@@ -378,9 +379,10 @@ async function messagesWrittenToAgent(req, res) {
           userId: "$_id",
           firstName: 1,
           lastName: 1,
+          isRead: 1,
         },
       },
-    ]);
+    ]).sort({ createdAt: -1 });
 
     if (allUsers.length === 0) {
       return res.status(404).json({
@@ -400,14 +402,7 @@ async function messagesWrittenToAgent(req, res) {
       userId: { $in: userIdsOnPage },
     }).sort({ createdAt: -1 });
 
-    const messages = messagesRaw.map((msg) => ({
-      ...msg.toObject(),
-      toAgent: msg.agentId,
-      fromId: msg.userId,
-      agentId: undefined,
-      userId: undefined,
-    }));
-
+    const messages = [messagesRaw[0]];
     const hasNextPage = pageNumber < totalPages;
     const hasPrevPage = pageNumber > 1;
 
@@ -469,7 +464,6 @@ async function deleteChat(req, res) {
   }
 }
 
-// Mark messages as read when agent opens chat with user
 async function markMessagesAsReadByAgent(req, res) {
   try {
     const { agentId, userId } = req.body;
@@ -603,10 +597,10 @@ async function getUnreadCountForUser(req, res) {
   }
 }
 
-// Check if last message from user to agent is read
+// Check if last message from user to agent is read (with pagination for message history)
 async function checkLastMessageReadStatus(req, res) {
   try {
-    const { agentId, userId } = req.query;
+    const { agentId, userId, page = 1, limit = 50 } = req.query;
 
     if (!agentId || !userId) {
       return res.status(400).send({
@@ -614,6 +608,10 @@ async function checkLastMessageReadStatus(req, res) {
         message: "Agent va foydalanuvchi ID kiritilishi kerak",
       });
     }
+
+    const pageNum = parseInt(page);
+    const limitNum = parseInt(limit);
+    const skip = (pageNum - 1) * limitNum;
 
     // Get last message sent by user to this agent
     const lastUserMessage = await Message.findOne({
@@ -628,6 +626,13 @@ async function checkLastMessageReadStatus(req, res) {
       userId,
       sentBy: "agent",
     }).sort({ createdAt: -1 });
+
+    // Get paginated message history
+    const totalMessages = await Message.countDocuments({ agentId, userId });
+    const messages = await Message.find({ agentId, userId })
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limitNum);
 
     res.status(200).send({
       ok: true,
@@ -649,6 +654,15 @@ async function checkLastMessageReadStatus(req, res) {
             sentBy: "agent",
           }
         : null,
+      pagination: {
+        currentPage: pageNum,
+        totalPages: Math.ceil(totalMessages / limitNum),
+        totalMessages,
+        limit: limitNum,
+        hasNextPage: pageNum < Math.ceil(totalMessages / limitNum),
+        hasPrevPage: pageNum > 1,
+      },
+      messages,
     });
   } catch (err) {
     console.log(err);
@@ -659,10 +673,10 @@ async function checkLastMessageReadStatus(req, res) {
   }
 }
 
-// Get unread count per user for an agent (useful for chat list)
+// Get unread count per user for an agent with pagination
 async function getUnreadCountPerUserForAgent(req, res) {
   try {
-    const { agentId } = req.query;
+    const { agentId, page = 1, limit = 20 } = req.query;
 
     if (!agentId) {
       return res.status(400).send({
@@ -670,6 +684,16 @@ async function getUnreadCountPerUserForAgent(req, res) {
         message: "Agent ID kiritilishi kerak",
       });
     }
+
+    const pageNum = parseInt(page);
+    const limitNum = parseInt(limit);
+    const skip = (pageNum - 1) * limitNum;
+
+    // Get total count of users with unread messages
+    const totalUsersWithUnread = await UserMessageModel.distinct("fromId", {
+      toAgent: agentId,
+      isRead: false,
+    });
 
     const unreadCounts = await UserMessageModel.aggregate([
       { $match: { toAgent: agentId, isRead: false } },
@@ -679,8 +703,12 @@ async function getUnreadCountPerUserForAgent(req, res) {
           unreadCount: { $sum: 1 },
           firstName: { $first: "$firstName" },
           lastName: { $first: "$lastName" },
+          lastMessageDate: { $max: "$createdAt" },
         },
       },
+      { $sort: { lastMessageDate: -1 } },
+      { $skip: skip },
+      { $limit: limitNum },
       {
         $project: {
           _id: 0,
@@ -688,6 +716,7 @@ async function getUnreadCountPerUserForAgent(req, res) {
           firstName: 1,
           lastName: 1,
           unreadCount: 1,
+          lastMessageDate: 1,
         },
       },
     ]);
@@ -695,6 +724,115 @@ async function getUnreadCountPerUserForAgent(req, res) {
     res.status(200).send({
       ok: true,
       data: unreadCounts,
+      pagination: {
+        currentPage: pageNum,
+        totalPages: Math.ceil(totalUsersWithUnread.length / limitNum),
+        totalUsers: totalUsersWithUnread.length,
+        limit: limitNum,
+        hasNextPage:
+          pageNum < Math.ceil(totalUsersWithUnread.length / limitNum),
+        hasPrevPage: pageNum > 1,
+      },
+    });
+  } catch (err) {
+    console.log(err);
+    res.status(500).send({
+      ok: false,
+      message: "Serverda xatolik yuz berdi",
+    });
+  }
+}
+
+// Get all unread messages for agent with pagination
+async function getUnreadMessagesForAgent(req, res) {
+  try {
+    const { agentId, page = 1, limit = 50 } = req.query;
+
+    if (!agentId) {
+      return res.status(400).send({
+        ok: false,
+        message: "Agent ID kiritilishi kerak",
+      });
+    }
+
+    const pageNum = parseInt(page);
+    const limitNum = parseInt(limit);
+    const skip = (pageNum - 1) * limitNum;
+
+    const totalUnread = await UserMessageModel.countDocuments({
+      toAgent: agentId,
+      isRead: false,
+    });
+
+    const unreadMessages = await UserMessageModel.find({
+      toAgent: agentId,
+      isRead: false,
+    })
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limitNum);
+
+    res.status(200).send({
+      ok: true,
+      data: unreadMessages,
+      pagination: {
+        currentPage: pageNum,
+        totalPages: Math.ceil(totalUnread / limitNum),
+        totalUnread,
+        limit: limitNum,
+        hasNextPage: pageNum < Math.ceil(totalUnread / limitNum),
+        hasPrevPage: pageNum > 1,
+      },
+    });
+  } catch (err) {
+    console.log(err);
+    res.status(500).send({
+      ok: false,
+      message: "Serverda xatolik yuz berdi",
+    });
+  }
+}
+
+// Get all unread messages for user with pagination
+async function getUnreadMessagesForUser(req, res) {
+  try {
+    const { userId, page = 1, limit = 50 } = req.query;
+
+    if (!userId) {
+      return res.status(400).send({
+        ok: false,
+        message: "Foydalanuvchi ID kiritilishi kerak",
+      });
+    }
+
+    const pageNum = parseInt(page);
+    const limitNum = parseInt(limit);
+    const skip = (pageNum - 1) * limitNum;
+
+    const totalUnread = await AgentMessage.countDocuments({
+      toUser: userId,
+      isRead: false,
+    });
+
+    const unreadMessages = await AgentMessage.find({
+      toUser: userId,
+      isRead: false,
+    })
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limitNum);
+
+    res.status(200).send({
+      ok: true,
+      data: unreadMessages,
+      pagination: {
+        currentPage: pageNum,
+        totalPages: Math.ceil(totalUnread / limitNum),
+        totalUnread,
+        limit: limitNum,
+        hasNextPage: pageNum < Math.ceil(totalUnread / limitNum),
+        hasPrevPage: pageNum > 1,
+      },
     });
   } catch (err) {
     console.log(err);
@@ -713,11 +851,12 @@ module.exports = {
   getMessages,
   messagesWrittenToAgent,
   deleteChat,
-  // New exports
   markMessagesAsReadByAgent,
   markMessagesAsReadByUser,
   getUnreadCountForAgent,
   getUnreadCountForUser,
   checkLastMessageReadStatus,
   getUnreadCountPerUserForAgent,
+  getUnreadMessagesForUser,
+  getUnreadMessagesForAgent,
 };

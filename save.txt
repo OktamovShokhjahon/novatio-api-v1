@@ -1,0 +1,235 @@
+// Mark messages as read when agent opens chat with user
+// async function markMessagesAsReadByAgent(req, res) {
+//   try {
+//     const { agentId, userId } = req.body;
+
+//     if (!agentId || !userId) {
+//       return res.status(400).send({
+//         ok: false,
+//         message: "Agent va foydalanuvchi ID kiritilishi kerak",
+//       });
+//     }
+
+//     await UserMessageModel.updateMany(
+//       { toAgent: agentId, fromId: userId, isRead: false },
+//       { $set: { isRead: true } }
+//     );
+
+//     const result = await Message.updateMany(
+//       { agentId, userId, sentBy: "user", isRead: false },
+//       { $set: { isRead: true } }
+//     );
+
+//     res.status(200).send({
+//       ok: true,
+//       message: "Xabarlar o'qilgan deb belgilandi",
+//       modifiedCount: result.modifiedCount,
+//     });
+//   } catch (err) {
+//     console.log(err);
+//     res.status(500).send({
+//       ok: false,
+//       message: "Serverda xatolik yuz berdi",
+//     });
+//   }
+// }
+
+// // Mark messages as read when user opens chat with agent
+// async function markMessagesAsReadByUser(req, res) {
+//   try {
+//     const { userId, agentId } = req.body;
+
+//     if (!userId || !agentId) {
+//       return res.status(400).send({
+//         ok: false,
+//         message: "Foydalanuvchi va agent ID kiritilishi kerak",
+//       });
+//     }
+
+//     // Mark messages from agent to user as read in AgentMessage collection
+//     await AgentMessage.updateMany(
+//       { toUser: userId, fromId: agentId, isRead: false },
+//       { $set: { isRead: true } }
+//     );
+
+//     // Mark messages in main Message collection where sentBy is agent
+//     const result = await Message.updateMany(
+//       { userId, agentId, sentBy: "agent", isRead: false },
+//       { $set: { isRead: true } }
+//     );
+
+//     res.status(200).send({
+//       ok: true,
+//       message: "Xabarlar o'qilgan deb belgilandi",
+//       modifiedCount: result.modifiedCount,
+//     });
+//   } catch (err) {
+//     console.log(err);
+//     res.status(500).send({
+//       ok: false,
+//       message: "Serverda xatolik yuz berdi",
+//     });
+//   }
+// }
+
+// // Get unread message count for agent (from all users)
+// async function getUnreadCountForAgent(req, res) {
+//   try {
+//     const { agentId } = req.query;
+
+//     if (!agentId) {
+//       return res.status(400).send({
+//         ok: false,
+//         message: "Agent ID kiritilishi kerak",
+//       });
+//     }
+
+//     const unreadCount = await UserMessageModel.countDocuments({
+//       toAgent: agentId,
+//       isRead: false,
+//     });
+
+//     res.status(200).send({
+//       ok: true,
+//       unreadCount,
+//     });
+//   } catch (err) {
+//     console.log(err);
+//     res.status(500).send({
+//       ok: false,
+//       message: "Serverda xatolik yuz berdi",
+//     });
+//   }
+// }
+
+// // Get unread message count for user (from all agents)
+// async function getUnreadCountForUser(req, res) {
+//   try {
+//     const { userId } = req.query;
+
+//     if (!userId) {
+//       return res.status(400).send({
+//         ok: false,
+//         message: "Foydalanuvchi ID kiritilishi kerak",
+//       });
+//     }
+
+//     const unreadCount = await AgentMessage.countDocuments({
+//       toUser: userId,
+//       isRead: false,
+//     });
+
+//     res.status(200).send({
+//       ok: true,
+//       unreadCount,
+//     });
+//   } catch (err) {
+//     console.log(err);
+//     res.status(500).send({
+//       ok: false,
+//       message: "Serverda xatolik yuz berdi",
+//     });
+//   }
+// }
+
+// // Check if last message from user to agent is read
+// async function checkLastMessageReadStatus(req, res) {
+//   try {
+//     const { agentId, userId } = req.query;
+
+//     if (!agentId || !userId) {
+//       return res.status(400).send({
+//         ok: false,
+//         message: "Agent va foydalanuvchi ID kiritilishi kerak",
+//       });
+//     }
+
+//     // Get last message sent by user to this agent
+//     const lastUserMessage = await Message.findOne({
+//       agentId,
+//       userId,
+//       sentBy: "user",
+//     }).sort({ createdAt: -1 });
+
+//     // Get last message sent by agent to this user
+//     const lastAgentMessage = await Message.findOne({
+//       agentId,
+//       userId,
+//       sentBy: "agent",
+//     }).sort({ createdAt: -1 });
+
+//     res.status(200).send({
+//       ok: true,
+//       lastUserMessage: lastUserMessage
+//         ? {
+//             messageId: lastUserMessage._id,
+//             message: lastUserMessage.message,
+//             isRead: lastUserMessage.isRead,
+//             createdAt: lastUserMessage.createdAt,
+//             sentBy: "user",
+//           }
+//         : null,
+//       lastAgentMessage: lastAgentMessage
+//         ? {
+//             messageId: lastAgentMessage._id,
+//             message: lastAgentMessage.message,
+//             isRead: lastAgentMessage.isRead,
+//             createdAt: lastAgentMessage.createdAt,
+//             sentBy: "agent",
+//           }
+//         : null,
+//     });
+//   } catch (err) {
+//     console.log(err);
+//     res.status(500).send({
+//       ok: false,
+//       message: "Serverda xatolik yuz berdi",
+//     });
+//   }
+// }
+
+// // Get unread count per user for an agent (useful for chat list)
+// async function getUnreadCountPerUserForAgent(req, res) {
+//   try {
+//     const { agentId } = req.query;
+
+//     if (!agentId) {
+//       return res.status(400).send({
+//         ok: false,
+//         message: "Agent ID kiritilishi kerak",
+//       });
+//     }
+
+//     const unreadCounts = await UserMessageModel.aggregate([
+//       { $match: { toAgent: agentId, isRead: false } },
+//       {
+//         $group: {
+//           _id: "$fromId",
+//           unreadCount: { $sum: 1 },
+//           firstName: { $first: "$firstName" },
+//           lastName: { $first: "$lastName" },
+//         },
+//       },
+//       {
+//         $project: {
+//           _id: 0,
+//           userId: "$_id",
+//           firstName: 1,
+//           lastName: 1,
+//           unreadCount: 1,
+//         },
+//       },
+//     ]);
+
+//     res.status(200).send({
+//       ok: true,
+//       data: unreadCounts,
+//     });
+//   } catch (err) {
+//     console.log(err);
+//     res.status(500).send({
+//       ok: false,
+//       message: "Serverda xatolik yuz berdi",
+//     });
+//   }
+// }
