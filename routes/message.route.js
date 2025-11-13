@@ -13,6 +13,8 @@ const {
   getUnreadCountForUser,
   checkLastMessageReadStatus,
   getUnreadCountPerUserForAgent,
+  registerDeviceUser,
+  registerDeviceAgent,
 } = require("../controllers/message.controller");
 const upload = require("../config/multer.config");
 
@@ -31,5 +33,7 @@ router.get("/unread-count-agent", getUnreadCountForAgent);
 router.get("/unread-count-user", getUnreadCountForUser);
 router.get("/last-message-status", checkLastMessageReadStatus);
 router.get("/unread-per-user", getUnreadCountPerUserForAgent);
+router.post("/register-device-user", registerDeviceUser);
+router.post("/register-device-agent", registerDeviceAgent);
 
 module.exports = router;

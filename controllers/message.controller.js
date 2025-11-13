@@ -1,6 +1,9 @@
 const AgentMessage = require("../models/AgentMessage");
 const Message = require("../models/Message");
+const UserDeviceModel = require("../models/UserDevice");
 const UserMessageModel = require("../models/UserMessage");
+const AgentDeviceModel = require("../models/AgentDevice");
+const sendNotificationToDevice = require("../services/sendNotificationToDevice");
 
 async function sendMessageUser(req, res) {
   try {
@@ -74,6 +77,14 @@ async function sendMessageUser(req, res) {
 
     const newMessage = await newMessageUser.save();
     const mainMessage = await newMainMessage.save();
+
+    const userToken = await UserDeviceModel.findOne({ userId: fromId });
+    if (userToken && userToken.fcmTokens.length > 0) {
+      sendNotificationToDevice(userToken.fcmTokens.token, {
+        title: "Yangi xabar",
+        body: message,
+      });
+    }
 
     res.status(201).send({
       ok: true,
@@ -157,6 +168,14 @@ async function sendMessageAgent(req, res) {
 
     const savedMessage = await newMainMessage.save();
     const newMessage = await newAgentMessage.save();
+
+    const agentToken = await AgentDeviceModel.findOne({ agentId: fromId });
+    if (agentToken && agentToken.fcmTokens.length > 0) {
+      sendNotificationToDevice(agentToken.fcmTokens.token, {
+        title: "Yangi xabar",
+        body: message,
+      });
+    }
 
     res.status(201).send({
       ok: true,
@@ -843,6 +862,99 @@ async function getUnreadMessagesForUser(req, res) {
   }
 }
 
+async function registerDeviceUser(req, res) {
+  try {
+    const { userId, fcmToken, device } = req.body;
+
+    if (!userId || !fcmToken || !device) {
+      return res.status(400).send({
+        ok: false,
+        message: "Barcha maydonlarni to'ldiring",
+      });
+    }
+
+    let userDevice = await UserDeviceModel.findOne({ userId });
+
+    if (!userDevice) {
+      userDevice = new UserDeviceModel({ userId, fcmTokens: [] });
+    } else {
+      return res.status(400).send({
+        ok: false,
+        message: "Foydalanuvchi qurilmasi allaqachon ro'yxatdan o'tgan",
+      });
+    }
+
+    // Check if token already exists
+    const tokenExists = userDevice.fcmTokens.some((t) => t.token === fcmToken);
+
+    if (!tokenExists) {
+      userDevice.fcmTokens.push({ token: fcmToken, device });
+      await userDevice.save();
+    } else {
+      return res.status(400).send({
+        ok: false,
+        message: "Ushbu token allaqachon ro'yxatdan o'tgan",
+      });
+    }
+
+    return res.status(200).send({
+      ok: true,
+      message: "Foydalanuvchi qurilmasi muvaffaqiyatli ro'yxatdan o'tdi",
+    });
+  } catch (err) {
+    return res.status(500).send({
+      ok: false,
+      message: "Ichki server xatosi",
+    });
+  }
+}
+
+async function registerDeviceAgent(req, res) {
+  try {
+    const { agentId, fcmToken, device } = req.body;
+
+    if (!agentId || !fcmToken || !device) {
+      return res.status(400).send({
+        ok: false,
+        message: "Barcha maydonlarni to'ldiring",
+      });
+    }
+
+    let agentDevice = await AgentDeviceModel.findOne({ agentId });
+
+    if (!agentDevice) {
+      agentDevice = new AgentDeviceModel({ agentId, fcmTokens: [] });
+    } else {
+      return res.status(400).send({
+        ok: false,
+        message: "Foydalanuvchi qurilmasi allaqachon ro'yxatdan o'tgan",
+      });
+    }
+
+    const tokenExists = agentDevice.fcmTokens.some((t) => t.token === fcmToken);
+
+    if (!tokenExists) {
+      agentDevice.fcmTokens.push({ token: fcmToken, device });
+      await agentDevice.save();
+    } else {
+      return res.status(400).send({
+        ok: false,
+        message: "Ushbu token allaqachon ro'yxatdan o'tgan",
+      });
+    }
+
+    return res.status(200).send({
+      ok: true,
+      message: "Foydalanuvchi qurilmasi muvaffaqiyatli ro'yxatdan o'tdi",
+    });
+  } catch (err) {
+    return res.status(500).send({
+      ok: false,
+      message: "Ichki server xatosi",
+    });
+  }
+}
+
 module.exports = {
   sendMessageUser,
   sendMessageAgent,
@@ -859,4 +971,6 @@ module.exports = {
   getUnreadCountPerUserForAgent,
   getUnreadMessagesForUser,
   getUnreadMessagesForAgent,
+  registerDeviceUser,
+  registerDeviceAgent,
 };
