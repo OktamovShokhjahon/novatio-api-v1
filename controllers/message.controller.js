@@ -392,6 +392,7 @@ async function messagesWrittenToAgent(req, res) {
           isRead: { $first: "$isRead" },
           lastMessage: { $last: "$message" },
           createdAt: { $last: "$createdAt" },
+          sentBy: { $last: "$sentBy" },
         },
       },
       {
@@ -403,6 +404,7 @@ async function messagesWrittenToAgent(req, res) {
           isRead: 1,
           lastMessage: 1,
           createdAt: 1,
+          sentBy: 1,
         },
       },
     ]).sort({ createdAt: -1 });
