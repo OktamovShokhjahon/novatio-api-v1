@@ -125,25 +125,25 @@ async function sendMessageAgent(req, res) {
       ? `${req.protocol}://${req.get("host")}/uploads/${req.file.filename}`
       : null;
 
-    await AgentMessage.updateMany(
-      { fromId: fromId },
-      {
-        $set: {
-          firstName: firstName,
-          lastName: lastName,
-        },
-      }
-    );
+    // await AgentMessage.updateMany(
+    //   { fromId: fromId },
+    //   {
+    //     $set: {
+    //       firstName: firstName,
+    //       lastName: lastName,
+    //     },
+    //   }
+    // );
 
-    await Message.updateMany(
-      { agentId: fromId, sentBy: "agent" },
-      {
-        $set: {
-          firstName: firstName,
-          lastName: lastName,
-        },
-      }
-    );
+    // await Message.updateMany(
+    //   { agentId: fromId, sentBy: "agent" },
+    //   {
+    //     $set: {
+    //       firstName: firstName,
+    //       lastName: lastName,
+    //     },
+    //   }
+    // );
 
     const newAgentMessage = new AgentMessage({
       fromId,
