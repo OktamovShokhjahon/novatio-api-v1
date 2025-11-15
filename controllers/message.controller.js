@@ -881,14 +881,14 @@ async function registerDeviceUser(req, res) {
 
     let userDevice = await UserDeviceModel.findOne({ userId });
 
-    if (!userDevice) {
-      userDevice = new UserDeviceModel({ userId, fcmTokens: [] });
-    } else {
-      return res.status(400).send({
-        ok: false,
-        message: "Foydalanuvchi qurilmasi allaqachon ro'yxatdan o'tgan",
-      });
-    }
+    // if (!userDevice) {
+    //   userDevice = new UserDeviceModel({ userId, fcmTokens: [] });
+    // } else {
+    //   return res.status(400).send({
+    //     ok: false,
+    //     message: "Foydalanuvchi qurilmasi allaqachon ro'yxatdan o'tgan",
+    //   });
+    // }
 
     // Check if token already exists
     const tokenExists = userDevice.fcmTokens.some((t) => t.token === fcmToken);
@@ -928,14 +928,14 @@ async function registerDeviceAgent(req, res) {
 
     let agentDevice = await AgentDeviceModel.findOne({ agentId });
 
-    if (!agentDevice) {
-      agentDevice = new AgentDeviceModel({ agentId, fcmTokens: [] });
-    } else {
-      return res.status(400).send({
-        ok: false,
-        message: "Foydalanuvchi qurilmasi allaqachon ro'yxatdan o'tgan",
-      });
-    }
+    // if (!agentDevice) {
+    //   agentDevice = new AgentDeviceModel({ agentId, fcmTokens: [] });
+    // } else {
+    //   return res.status(400).send({
+    //     ok: false,
+    //     message: "Foydalanuvchi qurilmasi allaqachon ro'yxatdan o'tgan",
+    //   });
+    // }
 
     const tokenExists = agentDevice.fcmTokens.some((t) => t.token === fcmToken);
 
