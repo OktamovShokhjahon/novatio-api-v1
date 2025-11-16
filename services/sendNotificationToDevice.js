@@ -1,4 +1,4 @@
-const admin = require("firebase-admin");
+const admin = require("../config/firebase.js");
 
 async function sendToDevice(token, notification, data = {}) {
   try {
