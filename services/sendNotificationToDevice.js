@@ -13,7 +13,7 @@ async function sendToDevice(token, notification, data = {}) {
         priority: "high",
         notification: {
           sound: "default",
-          channelId: "default",
+          channelId: "high_importance_channel", // Changed from "default" to match Postman
         },
       },
       // iOS specific options
