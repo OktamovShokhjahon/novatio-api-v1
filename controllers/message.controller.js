@@ -78,12 +78,16 @@ async function sendMessageUser(req, res) {
     const newMessage = await newMessageUser.save();
     const mainMessage = await newMainMessage.save();
 
-    const userToken = await UserDeviceModel.findOne({ userId: fromId });
+    const userToken = await AgentDeviceModel.find({ agentId: toAgent });
     if (userToken && userToken.fcmTokens.length > 0) {
-      sendNotificationToDevice(userToken.fcmTokens.token, {
-        title: "Yangi xabar",
-        body: message,
-      });
+      if (userToken && userToken.fcmTokens.length > 0) {
+        userToken.fcmTokens.map((token) => {
+          sendNotificationToDevice(token.token, {
+            title: "Yangi xabar",
+            body: message,
+          });
+        });
+      }
     }
 
     res.status(201).send({
@@ -169,11 +173,13 @@ async function sendMessageAgent(req, res) {
     const savedMessage = await newMainMessage.save();
     const newMessage = await newAgentMessage.save();
 
-    const agentToken = await AgentDeviceModel.findOne({ agentId: fromId });
+    const agentToken = await UserDeviceModel.find({ userId: toUser });
     if (agentToken && agentToken.fcmTokens.length > 0) {
-      sendNotificationToDevice(agentToken.fcmTokens.token, {
-        title: "Yangi xabar",
-        body: message,
+      agentToken.fcmTokens.map((token) => {
+        sendNotificationToDevice(token.token, {
+          title: "Yangi xabar",
+          body: message,
+        });
       });
     }
 
