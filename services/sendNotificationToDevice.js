@@ -1,3 +1,5 @@
+const admin = require("firebase-admin");
+
 async function sendToDevice(token, notification, data = {}) {
   try {
     const message = {
