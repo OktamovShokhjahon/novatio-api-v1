@@ -4,6 +4,7 @@ const UserDeviceModel = require("../models/UserDevice");
 const UserMessageModel = require("../models/UserMessage");
 const AgentDeviceModel = require("../models/AgentDevice");
 const sendNotificationToDevice = require("../services/sendNotificationToDevice");
+const sendNotificationToUser = require("../services/sendNotificationToDeviceUser");
 
 async function sendMessageUser(req, res) {
   try {
@@ -176,10 +177,18 @@ async function sendMessageAgent(req, res) {
     const agentToken = await UserDeviceModel.findOne({ userId: toUser });
     if (agentToken && agentToken.fcmTokens.length > 0) {
       agentToken.fcmTokens.map((token) => {
-        sendNotificationToDevice(token.token, {
-          title: "Yangi xabar",
-          body: message,
-        });
+        sendNotificationToUser(
+          token.token,
+          {
+            title: "Yangi xabar",
+            body: message,
+          },
+          {
+            redirecting_page: "agents_page",
+            agent_id: fromId,
+            agent_name: firstName + " " + lastName,
+          }
+        );
       });
     }
 
