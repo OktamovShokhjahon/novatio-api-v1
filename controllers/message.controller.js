@@ -78,7 +78,7 @@ async function sendMessageUser(req, res) {
     const newMessage = await newMessageUser.save();
     const mainMessage = await newMainMessage.save();
 
-    const userToken = await AgentDeviceModel.find({ agentId: toAgent });
+    const userToken = await AgentDeviceModel.findOne({ agentId: toAgent });
     if (userToken && userToken.fcmTokens.length > 0) {
       if (userToken && userToken.fcmTokens.length > 0) {
         userToken.fcmTokens.map((token) => {
@@ -173,7 +173,7 @@ async function sendMessageAgent(req, res) {
     const savedMessage = await newMainMessage.save();
     const newMessage = await newAgentMessage.save();
 
-    const agentToken = await UserDeviceModel.find({ userId: toUser });
+    const agentToken = await UserDeviceModel.findOne({ userId: toUser });
     if (agentToken && agentToken.fcmTokens.length > 0) {
       agentToken.fcmTokens.map((token) => {
         sendNotificationToDevice(token.token, {
