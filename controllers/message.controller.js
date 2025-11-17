@@ -4,7 +4,7 @@ const UserDeviceModel = require("../models/UserDevice");
 const UserMessageModel = require("../models/UserMessage");
 const AgentDeviceModel = require("../models/AgentDevice");
 const sendNotificationToDevice = require("../services/sendNotificationToDevice");
-const sendNotificationToUser = require("../services/sendNotificationToDeviceUser");
+const sendNotificationToUser = require("../services/sendNotificationToDeviceUser.js");
 
 async function sendMessageUser(req, res) {
   try {
@@ -972,6 +972,7 @@ async function registerDeviceAgent(req, res) {
     return res.status(500).send({
       ok: false,
       message: "Ichki server xatosi",
+      error: err,
     });
   }
 }
