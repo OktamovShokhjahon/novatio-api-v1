@@ -1,6 +1,7 @@
 const admin = require("../config/userFirebase.js");
 
 async function sendNotificationToUser(token, notification, data) {
+  console.group("send notification to user device");
   console.log(token, notification, data);
   try {
     const message = {
