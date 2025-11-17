@@ -879,6 +879,7 @@ async function getUnreadMessagesForUser(req, res) {
     res.status(500).send({
       ok: false,
       message: "Serverda xatolik yuz berdi",
+      error: err,
     });
   }
 }
@@ -925,6 +926,7 @@ async function registerDeviceUser(req, res) {
   } catch (err) {
     return res.status(500).send({
       ok: false,
+      error: err,
       message: "Ichki server xatosi",
     });
   }
