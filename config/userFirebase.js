@@ -1,7 +1,9 @@
 const admin = require("firebase-admin");
 const serviceAccount = require("./firebase-service-account-user.json");
 
-const appName = "user-device";
+console.log(admin.apps.length);
+
+const appName = "messaging";
 
 if (!admin.apps.find((app) => app.name === appName)) {
   admin.initializeApp(
