@@ -1,4 +1,18 @@
-const admin = require("../config/userFirebase.js");
+const admin = require("firebase-admin");
+const serviceAccount = require("../config/firebase-service-account-user.json");
+
+const appName = "messaging";
+
+if (!admin.apps.find((app) => app.name === appName)) {
+  admin.initializeApp(
+    {
+      credential: admin.credential.cert(serviceAccount),
+    },
+    appName
+  );
+}
+
+console.log(admin.apps.length);
 
 async function sendNotificationToUser(token, notification, data) {
   console.group("send notification to user device");
@@ -11,7 +25,6 @@ async function sendNotificationToUser(token, notification, data) {
         body: notification.body,
         image: notification.image || undefined,
       },
-      // data,
       android: {
         priority: "high",
         notification: {
@@ -19,7 +32,6 @@ async function sendNotificationToUser(token, notification, data) {
           channelId: "high_importance_channel",
         },
       },
-      // iOS specific options
       apns: {
         payload: {
           aps: {
@@ -30,7 +42,10 @@ async function sendNotificationToUser(token, notification, data) {
       },
     };
 
-    const response = await admin.messaging().send(message);
+    // Get the specific named app and use its messaging service
+    const messagingApp = admin.app(appName);
+    const response = await messagingApp.messaging().send(message);
+
     console.log("Successfully sent message:", response);
     return { success: true, messageId: response };
   } catch (error) {
