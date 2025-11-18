@@ -25,6 +25,7 @@ async function sendNotificationToUser(token, notification, data) {
         body: notification.body,
         image: notification.image || undefined,
       },
+      data,
       android: {
         priority: "high",
         notification: {
