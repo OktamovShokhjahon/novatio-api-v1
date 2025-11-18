@@ -3,10 +3,13 @@ const serviceAccount = require("./firebase-service-account-user.json");
 
 console.log(admin.apps.length);
 
-if (!admin.apps.length) {
-  admin.initializeApp({
+// if (!admin.apps.length) {
+admin.initializeApp(
+  {
     credential: admin.credential.cert(serviceAccount),
-  });
-}
+  },
+  "user-device"
+);
+// }
 
 module.exports = admin;
