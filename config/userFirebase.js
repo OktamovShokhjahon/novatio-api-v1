@@ -1,15 +1,15 @@
 const admin = require("firebase-admin");
 const serviceAccount = require("./firebase-service-account-user.json");
 
-console.log(admin.apps);
+const appName = "user-device";
 
-// if (!admin.apps.length) {
-admin.initializeApp(
-  {
-    credential: admin.credential.cert(serviceAccount),
-  },
-  "user-device"
-);
-// }
+if (!admin.apps.find((app) => app.name === appName)) {
+  admin.initializeApp(
+    {
+      credential: admin.credential.cert(serviceAccount),
+    },
+    appName
+  );
+}
 
 module.exports = admin;
