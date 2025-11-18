@@ -177,6 +177,7 @@ async function sendMessageAgent(req, res) {
     const agentToken = await UserDeviceModel.findOne({ userId: toUser });
     if (agentToken && agentToken.fcmTokens.length > 0) {
       agentToken.fcmTokens.map((token) => {
+        console.log("token", token);
         sendNotificationToUser(
           token.token,
           {
